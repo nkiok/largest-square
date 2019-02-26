@@ -99,11 +99,12 @@ namespace Tests
             {
                 GetIndex(bitmapPixels, pixel)
                     .OnSuccess(index => GetRow(index, width)
-                    .Ensure(row => row !=0, "Adjacent out of bounds")
+                    .Ensure(row => row != 0, "Adjacent out of bounds")
                     .OnSuccess(row => GetCol(index, width, row)
                     .Ensure(col => col != 0, "Adjacent out of bounds")
-                    .OnSuccess(col => result = ProcessAdjacent(bitmapPixels, pixel, width, row, col, result))));
+                    .OnSuccess(col => result = Math.Max(result, ProcessAdjacent(bitmapPixels, pixel, width, row, col)))));
             }
+
 
             return result * result;
         }
@@ -128,14 +129,13 @@ namespace Tests
             SingleColorPixel pixel, 
             int width, 
             int row, 
-            int col,
-            int currentMax)
+            int col)
         {
             var adjacentValue = GetAdjacentCacheMapValue(bitmap, row, col, width);
 
             pixel.Count = 1 + adjacentValue;
 
-            return Math.Max(currentMax, pixel.Count);
+            return pixel.Count;
         }
 
         private static int[] ConvertToArray(string testBitmap)
