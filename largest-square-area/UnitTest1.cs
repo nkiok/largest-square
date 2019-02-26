@@ -25,7 +25,23 @@ namespace Tests
         [TestCase(BitmapContaining2X2Square, 4, ExpectedResult = 2 * 2, TestName = "{m} a bitmap containing a 2x2 square")]
         [TestCase(BitmapContaining3X3Square, 4, ExpectedResult = 3 * 3, TestName = "{m} a bitmap containing a 3x3 square")]
         [TestCase(BitmapContaining26X26Square, 102, ExpectedResult = 26 * 26, TestName = "{m} a bitmap containing a 26x26 square")]
-        public int ReturnsExpectedResultFor(string testBitmap, int width)
+        public int Method1_ReturnsExpectedResultFor(string testBitmap, int width)
+        {
+            return FindLargestSquareArea(testBitmap, width);
+        }
+
+        [TestCase(BitmapContaining2X2Square, 4, ExpectedResult = 2 * 2, TestName = "{m} a bitmap containing a 2x2 square")]
+        [TestCase(BitmapContaining3X3Square, 4, ExpectedResult = 3 * 3, TestName = "{m} a bitmap containing a 3x3 square")]
+        [TestCase(BitmapContaining26X26Square, 102, ExpectedResult = 26 * 26, TestName = "{m} a bitmap containing a 26x26 square")]
+        public int Method2_ReturnsExpectedResultFor(string testBitmap, int width)
+        {
+            return FindLargestSquareAreaSingleLoop(testBitmap, width);
+        }
+
+        [TestCase(BitmapContaining2X2Square, 4, ExpectedResult = 2 * 2, TestName = "{m} a bitmap containing a 2x2 square")]
+        [TestCase(BitmapContaining3X3Square, 4, ExpectedResult = 3 * 3, TestName = "{m} a bitmap containing a 3x3 square")]
+        [TestCase(BitmapContaining26X26Square, 102, ExpectedResult = 26 * 26, TestName = "{m} a bitmap containing a 26x26 square")]
+        public int Method3_ReturnsExpectedResultFor(string testBitmap, int width)
         {
             return FindLargestSquareAreaFunctional(testBitmap, width);
         }
@@ -50,9 +66,9 @@ namespace Tests
 
                     if (bitmap[examinedPixelIndex] == 0) continue;
 
-                    var adjacentValue = GetAdjacentCacheMapValue(cacheMap, row, col, width);
+                    var adjacentValue = GetAdjacentValue(cacheMap, row, col, width);
 
-                    cacheMap[examinedPixelIndex] = 1 + adjacentValue;
+                    cacheMap[examinedPixelIndex] += adjacentValue;
 
                     result = Math.Max(result, cacheMap[examinedPixelIndex]);
                 }
@@ -61,7 +77,7 @@ namespace Tests
             return result * result;
         }
 
-        private static int FindLargestSquareAreaAlt(string testBitmap, int width)
+        private static int FindLargestSquareAreaSingleLoop(string testBitmap, int width)
         {
             var bitmapPixels = ConvertFrom(testBitmap).ToList();
 
@@ -79,9 +95,9 @@ namespace Tests
 
                 if(col == 0) continue;
 
-                var adjacentValue = GetAdjacentCacheMapValue(bitmapPixels, row, col, width);
+                var adjacentValue = GetAdjacentValue(bitmapPixels, row, col, width);
 
-                pixel.Count = 1 + adjacentValue;
+                pixel.Count += adjacentValue.Value;
 
                 result = Math.Max(result, pixel.Count);
             }
@@ -102,7 +118,14 @@ namespace Tests
                     .Ensure(row => row != 0, "Adjacent out of bounds")
                     .OnSuccess(row => GetCol(index, width, row)
                     .Ensure(col => col != 0, "Adjacent out of bounds")
-                    .OnSuccess(col => result = Math.Max(result, ProcessAdjacent(bitmapPixels, pixel, width, row, col)))));
+                    .OnSuccess(col => GetAdjacentValue(bitmapPixels, row, col, width)
+                    .OnSuccess(adjacentValue =>
+                                {
+                                    pixel.Count += adjacentValue;
+
+                                    return result = Math.Max(result, pixel.Count);
+                                }
+                    ))));
             }
 
             return result * result;
@@ -123,20 +146,6 @@ namespace Tests
             return Result.Ok(index - (row * width));
         }
 
-        private static int ProcessAdjacent(
-            IReadOnlyList<SingleColorPixel> bitmap, 
-            SingleColorPixel pixel, 
-            int width, 
-            int row, 
-            int col)
-        {
-            var adjacentValue = GetAdjacentCacheMapValue(bitmap, row, col, width);
-
-            pixel.Count = 1 + adjacentValue;
-
-            return pixel.Count;
-        }
-
         private static int[] ConvertToArray(string testBitmap)
         {
             return testBitmap.Select(s => s - 48).ToArray();
@@ -152,22 +161,22 @@ namespace Tests
                 });
         }
 
-        private static int GetAdjacentCacheMapValue(IReadOnlyList<int> cacheMap, int row, int col, int width)
+        private static int GetAdjacentValue(IReadOnlyList<int> cache, int row, int col, int width)
         {
             return Math.Min(
                 Math.Min(
-                cacheMap[(row - 1) * width + col],
-                cacheMap[row * width + (col - 1)]),
-                cacheMap[(row - 1) * width + (col - 1)]);
+                cache[(row - 1) * width + col],
+                cache[row * width + (col - 1)]),
+                cache[(row - 1) * width + (col - 1)]);
         }
 
-        private static int GetAdjacentCacheMapValue(IReadOnlyList<SingleColorPixel> cacheMap, int row, int col, int width)
+        private static Result<int> GetAdjacentValue(IReadOnlyList<SingleColorPixel> cache, int row, int col, int width)
         {
-            return Math.Min(
+            return Result.Ok(Math.Min(
                 Math.Min(
-                    cacheMap[(row - 1) * width + col].Count,
-                    cacheMap[row * width + (col - 1)].Count),
-                cacheMap[(row - 1) * width + (col - 1)].Count);
+                    cache[(row - 1) * width + col].Count,
+                    cache[row * width + (col - 1)].Count),
+                cache[(row - 1) * width + (col - 1)].Count));
         }
     }
 }
